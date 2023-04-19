@@ -41,8 +41,8 @@ import coil.compose.rememberAsyncImagePainter
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Action.View
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Screen
-import com.jinrong.mvi.mvicoroutinescompose.main.entity.Album
-import com.jinrong.mvi.mvicoroutinescompose.main.entity.SearchAlbums
+import com.jinrong.mvi.mvicoroutinescompose.entity.Album
+import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
 import kotlinx.coroutines.flow.Flow
 
 class MainActivity : ComponentActivity() {
@@ -188,6 +188,5 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    
 }
 

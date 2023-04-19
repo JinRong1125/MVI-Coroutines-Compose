@@ -1,7 +1,7 @@
 package com.jinrong.mvi.mvicoroutinescompose.main
 
-import com.jinrong.mvi.mvicoroutinescompose.main.entity.Album
-import com.jinrong.mvi.mvicoroutinescompose.main.entity.SearchAlbums
+import com.jinrong.mvi.mvicoroutinescompose.entity.Album
+import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
 import com.jinrong.mvi.mvicoroutinescompose.mvi.FlowAction
 
 class MainContract {

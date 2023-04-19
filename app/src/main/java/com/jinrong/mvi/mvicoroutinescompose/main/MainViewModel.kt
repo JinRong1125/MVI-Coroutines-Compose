@@ -4,7 +4,7 @@ import androidx.navigation.NavHostController
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Action
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.State
-import com.jinrong.mvi.mvicoroutinescompose.main.service.VGMdbService
+import com.jinrong.mvi.mvicoroutinescompose.service.VGMdbService
 import com.jinrong.mvi.mvicoroutinescompose.mvi.FlowViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
