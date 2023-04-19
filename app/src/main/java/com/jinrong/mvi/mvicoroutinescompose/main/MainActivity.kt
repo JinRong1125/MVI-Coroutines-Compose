@@ -23,12 +23,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -51,9 +51,6 @@ import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Screen
 import com.jinrong.mvi.mvicoroutinescompose.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChangedBy
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 
 class MainActivity : ComponentActivity() {
 
@@ -61,7 +58,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val navController = rememberNavController()
-            val mainViewModel = MainViewModel(lifecycleScope, navController)
+            val searchText = remember { mutableStateOf(TextFieldValue("sakura no toki")) }
+            val mainViewModel = MainViewModel(lifecycleScope, searchText, navController)
                 .apply {
                     Subscribe(views = views)
                 }
@@ -77,13 +75,10 @@ class MainActivity : ComponentActivity() {
                             initialValue = emptyList(),
                             minActiveState = Lifecycle.State.CREATED
                         )
-                    val searchAlbum: (String) -> Unit = {
-                        mainViewModel.sendIntent(Intent.SearchAlbum(it))
-                    }
                     val clickAlbum: (SearchAlbums.Results.Album) -> Unit = {
                         mainViewModel.sendIntent(Intent.ClickAlbum(it))
                     }
-                    SearchScreen(searchAlbums, searchAlbum, clickAlbum)
+                    SearchScreen(searchAlbums, searchText, clickAlbum)
                 }
                 composable(
                     route = Screen.Album.ROUTE,
@@ -112,19 +107,9 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun SearchScreen(
         searchAlbums: State<List<SearchAlbums.Results.Album>>,
-        onSearchTextChanged: (text: String) -> Unit,
+        searchText: MutableState<TextFieldValue>,
         onClickAlbum: (SearchAlbums.Results.Album) -> Unit
     ) {
-        val searchText = remember { mutableStateOf(TextFieldValue("sakura no toki")) }
-        LaunchedEffect(LocalLifecycleOwner.current) {
-            snapshotFlow {
-                searchText.value
-            }
-                .distinctUntilChangedBy { it.text }
-                .onEach { onSearchTextChanged(it.text) }
-                .launchIn(this)
-        }
-
         Column {
             OutlinedTextField(
                 value = searchText.value,

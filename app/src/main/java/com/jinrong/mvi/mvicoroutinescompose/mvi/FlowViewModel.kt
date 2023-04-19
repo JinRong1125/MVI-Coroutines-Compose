@@ -23,7 +23,7 @@ constructor(
     coroutineScope: CoroutineScope,
     initializeState: State,
     initializeIntents: List<Intent> = emptyList(),
-    eventBusFlows: List<Flow<Intent>> = emptyList(),
+    extraIntentFlows: List<Flow<Intent>> = emptyList(),
     coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
     private val eventClass = getClass<ActionEvent>(3)
@@ -34,7 +34,7 @@ constructor(
         MutableSharedFlow<Intent>(extraBufferCapacity = 64, replay = 64)
     }
     private val actionFlow by lazy {
-        (listOf(intentFlow) + eventBusFlows)
+        (listOf(intentFlow) + extraIntentFlows)
             .merge()
             .onStart {
                 initializeIntents.forEach {

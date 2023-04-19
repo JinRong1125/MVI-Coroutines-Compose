@@ -1,5 +1,7 @@
 package com.jinrong.mvi.mvicoroutinescompose.main
 
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.navigation.NavHostController
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Action
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
@@ -21,10 +23,18 @@ import kotlinx.coroutines.withContext
 
 class MainViewModel(
     coroutineScope: CoroutineScope,
-    private val navHostController: NavHostController
+    searchTextState: androidx.compose.runtime.State<TextFieldValue>,
+    private val navHostController: NavHostController,
 ) : FlowViewModel<Intent, State, Action, Action.Event, Action.View, Action.State>(
     coroutineScope = coroutineScope,
-    initializeState = State.initialize()
+    initializeState = State.initialize(),
+    extraIntentFlows = listOf(
+        snapshotFlow {
+            searchTextState.value
+        }
+            .distinctUntilChangedBy { it.text }
+            .map { Intent.SearchAlbum(it.text) }
+    )
 ) {
     private val vgmdbService = VGMdbService()
 
