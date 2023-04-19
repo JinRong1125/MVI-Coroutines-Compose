@@ -51,6 +51,7 @@ import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Screen
 import com.jinrong.mvi.mvicoroutinescompose.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
@@ -118,9 +119,10 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(LocalLifecycleOwner.current) {
             snapshotFlow {
                 searchText.value
-            }.onEach {
-                onSearchTextChanged(it.text)
-            }.launchIn(this)
+            }
+                .distinctUntilChangedBy { it.text }
+                .onEach { onSearchTextChanged(it.text) }
+                .launchIn(this)
         }
 
         Column {

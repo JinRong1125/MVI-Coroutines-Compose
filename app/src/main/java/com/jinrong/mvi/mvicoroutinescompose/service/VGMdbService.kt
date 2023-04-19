@@ -34,7 +34,7 @@ class VGMdbService {
         }
     }
 
-    suspend fun searchAlbums(query: String) = withContext(Dispatchers.IO) {
+    suspend fun searchAlbums(query: String): SearchAlbums = withContext(Dispatchers.IO) {
         httpClient.get {
             url {
                 protocol = URLProtocol.HTTPS
@@ -42,16 +42,16 @@ class VGMdbService {
                 path(PATH_SEARCH_ALBUMS)
                 parameter("q", query)
             }
-        }.body<SearchAlbums>()
+        }.body()
     }
 
-    suspend fun album(path: String) = withContext(Dispatchers.IO) {
+    suspend fun album(path: String): Album = withContext(Dispatchers.IO) {
         httpClient.get {
             url {
                 protocol = URLProtocol.HTTPS
                 host = HOST_VGMDB
                 path(path)
             }
-        }.body<Album>()
+        }.body()
     }
 }
