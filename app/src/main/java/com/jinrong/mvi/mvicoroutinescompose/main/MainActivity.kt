@@ -1,0 +1,188 @@
+package com.jinrong.mvi.mvicoroutinescompose.main
+
+import android.annotation.SuppressLint
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import coil.compose.rememberAsyncImagePainter
+import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Action.View
+import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
+import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Screen
+import com.jinrong.mvi.mvicoroutinescompose.main.entity.Album
+import com.jinrong.mvi.mvicoroutinescompose.main.entity.SearchAlbums
+import kotlinx.coroutines.launch
+
+class MainActivity : ComponentActivity() {
+
+    @SuppressLint("CoroutineCreationDuringComposition")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            val navController = rememberNavController()
+            val mainViewModel = MainViewModel(lifecycleScope, navController)
+            rememberCoroutineScope().launch {
+                repeatOnLifecycle(Lifecycle.State.CREATED) {
+                    mainViewModel.views.collect {
+                        when (it) {
+                            is View.Toast -> {
+                                Toast.makeText(this@MainActivity, it.text, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+            }
+
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Search.route,
+            ) {
+                composable(
+                    route = Screen.Search.route
+                ) {
+                    val searchAlbums = mainViewModel.searchAlbums
+                        .collectAsStateWithLifecycle(
+                            initialValue = emptyList(),
+                            minActiveState = Lifecycle.State.CREATED
+                        )
+                    SearchScreen(searchAlbums) {
+                        mainViewModel.sendIntent(Intent.ClickAlbum(it))
+                    }
+                }
+                composable(
+                    route = Screen.Album.ROUTE,
+                    arguments = listOf(
+                        navArgument(Screen.Album.LINK) {
+                            type = NavType.StringType
+                        }
+                    )
+                ) {
+                    val album = mainViewModel.album
+                        .collectAsStateWithLifecycle(
+                            initialValue = null,
+                            minActiveState = Lifecycle.State.CREATED
+                        )
+                    AlbumScreen(album) {
+                        val link = it.arguments?.getString(Screen.Album.LINK) ?: ""
+                        mainViewModel.sendIntent(Intent.ShowAlbum(link))
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun SearchScreen(
+        searchAlbums: State<List<SearchAlbums.Results.Album>>,
+        onClickAlbum: (SearchAlbums.Results.Album) -> Unit
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(5.dp)
+        ) {
+            items(items = searchAlbums.value) {
+                Card(
+                    shape = RoundedCornerShape(2.dp),
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .clickable(
+                            onClick = { onClickAlbum(it) }
+                        ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 4.dp
+                    )
+                ) {
+                    Text(
+                        text = it.titles.ja,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun AlbumScreen(
+        album: State<Album?>,
+        onCreate: () -> Unit
+    ) {
+        val currentOnCreate by rememberUpdatedState(onCreate)
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val lifecycleObserver = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_CREATE) {
+                    currentOnCreate()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+            }
+        }
+
+        Card(
+            shape = RoundedCornerShape(2.dp),
+            modifier = Modifier.padding(10.dp),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 4.dp
+            ),
+        ) {
+            Row(
+                Modifier.padding(10.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                val model = album.value?.covers?.firstOrNull()?.thumb
+                Image(
+                    painter = rememberAsyncImagePainter(model),
+                    contentDescription = null,
+                    modifier = Modifier.weight(1F),
+                    contentScale = ContentScale.FillWidth
+                )
+
+                val text = album.value?.name ?: ""
+                Text(
+                    text = text,
+                    modifier = Modifier
+                        .padding(start = 10.dp)
+                        .weight(2F)
+                )
+            }
+        }
+    }
+}
+
