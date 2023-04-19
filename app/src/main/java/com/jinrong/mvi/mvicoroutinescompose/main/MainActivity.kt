@@ -97,10 +97,11 @@ class MainActivity : ComponentActivity() {
                             initialValue = null,
                             minActiveState = Lifecycle.State.CREATED
                         )
-                    AlbumScreen(album) {
+                    val showAlbum: () -> Unit = {
                         val link = it.arguments?.getString(Screen.Album.LINK) ?: ""
                         mainViewModel.sendIntent(Intent.ShowAlbum(link))
                     }
+                    AlbumScreen(album, showAlbum)
                 }
             }
         }
