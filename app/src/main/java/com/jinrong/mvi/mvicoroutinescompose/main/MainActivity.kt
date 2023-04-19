@@ -1,6 +1,5 @@
 package com.jinrong.mvi.mvicoroutinescompose.main
 
-import android.annotation.SuppressLint
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -20,9 +19,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -44,28 +43,18 @@ import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Screen
 import com.jinrong.mvi.mvicoroutinescompose.main.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.main.entity.SearchAlbums
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.Flow
 
 class MainActivity : ComponentActivity() {
 
-    @SuppressLint("CoroutineCreationDuringComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val navController = rememberNavController()
             val mainViewModel = MainViewModel(lifecycleScope, navController)
-            rememberCoroutineScope().launch {
-                repeatOnLifecycle(Lifecycle.State.CREATED) {
-                    mainViewModel.views.collect {
-                        when (it) {
-                            is View.Toast -> {
-                                Toast.makeText(this@MainActivity, it.text, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
+                .apply {
+                    Subscribe(views = views)
                 }
-            }
-
             NavHost(
                 navController = navController,
                 startDestination = Screen.Search.route,
@@ -184,5 +173,21 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    
+    @Composable 
+    private fun Subscribe(views: Flow<View>) {
+        LaunchedEffect(views) {
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
+                views.collect {
+                    when (it) {
+                        is View.Toast -> {
+                            Toast.makeText(this@MainActivity, it.text, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
 }
 
