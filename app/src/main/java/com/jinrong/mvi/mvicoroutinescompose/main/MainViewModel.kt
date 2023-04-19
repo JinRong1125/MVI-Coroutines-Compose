@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.flatMapConcat
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -23,8 +24,7 @@ class MainViewModel(
     private val navHostController: NavHostController
 ) : FlowViewModel<Intent, State, Action, Action.Event, Action.View, Action.State>(
     coroutineScope = coroutineScope,
-    initializeState = State.initialize(),
-    initializeIntents = listOf(Intent.SearchAlbum("sakura no toki"))
+    initializeState = State.initialize()
 ) {
     private val vgmdbService = VGMdbService()
 
@@ -34,7 +34,7 @@ class MainViewModel(
     override fun Flow<Intent>.increaseAction(state: () -> State) =
         merge(
             filterIsInstance<Intent.SearchAlbum>()
-                .flatMapConcat {
+                .flatMapLatest {
                     flow {
                         val query = it.query
                         val searchAlbums = runCatching {

@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,16 +17,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -44,6 +51,8 @@ import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Screen
 import com.jinrong.mvi.mvicoroutinescompose.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 class MainActivity : ComponentActivity() {
 
@@ -67,9 +76,13 @@ class MainActivity : ComponentActivity() {
                             initialValue = emptyList(),
                             minActiveState = Lifecycle.State.CREATED
                         )
-                    SearchScreen(searchAlbums) {
+                    val searchAlbum: (String) -> Unit = {
+                        mainViewModel.sendIntent(Intent.SearchAlbum(it))
+                    }
+                    val clickAlbum: (SearchAlbums.Results.Album) -> Unit = {
                         mainViewModel.sendIntent(Intent.ClickAlbum(it))
                     }
+                    SearchScreen(searchAlbums, searchAlbum, clickAlbum)
                 }
                 composable(
                     route = Screen.Album.ROUTE,
@@ -93,33 +106,53 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun SearchScreen(
         searchAlbums: State<List<SearchAlbums.Results.Album>>,
+        onSearchTextChanged: (text: String) -> Unit,
         onClickAlbum: (SearchAlbums.Results.Album) -> Unit
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(5.dp)
-        ) {
-            items(items = searchAlbums.value) {
-                Card(
-                    shape = RoundedCornerShape(2.dp),
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .clickable(
-                            onClick = { onClickAlbum(it) }
-                        ),
-                    elevation = CardDefaults.cardElevation(
-                        defaultElevation = 4.dp
-                    )
-                ) {
-                    Text(
-                        text = it.titles.ja,
+        val searchText = remember { mutableStateOf(TextFieldValue("sakura no toki")) }
+        LaunchedEffect(LocalLifecycleOwner.current) {
+            snapshotFlow {
+                searchText.value
+            }.onEach {
+                onSearchTextChanged(it.text)
+            }.launchIn(this)
+        }
+
+        Column {
+            OutlinedTextField(
+                value = searchText.value,
+                onValueChange = { searchText.value = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp)
+            )
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(5.dp)
+            ) {
+                items(items = searchAlbums.value) {
+                    Card(
+                        shape = RoundedCornerShape(2.dp),
                         modifier = Modifier
-                            .fillMaxWidth()
                             .padding(10.dp)
-                    )
+                            .clickable(
+                                onClick = { onClickAlbum(it) }
+                            ),
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = 4.dp
+                        )
+                    ) {
+                        Text(
+                            text = it.titles.ja,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(10.dp)
+                        )
+                    }
                 }
             }
         }
