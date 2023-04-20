@@ -49,6 +49,9 @@ class MainViewModel(
                 .flatMapLatest {
                     flow {
                         val query = it.query
+                        if (query.isBlank()) {
+                            return@flow
+                        }
                         val searchAlbums = runCatching {
                             vgmdbService.searchAlbums(query)
                         }.onFailure {
