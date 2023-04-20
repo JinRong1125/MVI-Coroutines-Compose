@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
                             minActiveState = Lifecycle.State.CREATED
                         )
                     val clickAlbum: (SearchAlbums.Results.Album) -> Unit = {
-                        mainViewModel.sendIntent(Intent.ClickAlbum(it))
+                        mainViewModel.send(Intent.ClickAlbum(it))
                     }
                     SearchScreen(searchAlbums, searchText, clickAlbum)
                 }
@@ -94,7 +94,7 @@ class MainActivity : ComponentActivity() {
                         )
                     val showAlbum: () -> Unit = {
                         val link = it.arguments?.getString(Screen.Album.LINK) ?: ""
-                        mainViewModel.sendIntent(Intent.ShowAlbum(link))
+                        mainViewModel.send(Intent.ShowAlbum(link))
                     }
                     AlbumScreen(album, showAlbum)
                 }

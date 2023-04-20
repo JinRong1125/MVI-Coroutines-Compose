@@ -14,10 +14,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
-import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.flatMapConcat
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
@@ -26,7 +22,7 @@ import kotlinx.coroutines.withContext
 class MainViewModel(
     coroutineScope: CoroutineScope,
     searchTextState: androidx.compose.runtime.State<TextFieldValue>,
-    private val navHostController: NavHostController,
+    private val navHostController: NavHostController
 ) : FlowViewModel<Intent, State, EventAction, ViewAction, StateAction>(
     coroutineScope = coroutineScope,
     initializeState = State.initialize(),
@@ -43,45 +39,35 @@ class MainViewModel(
     val searchAlbums = states.distinctUntilChangedBy { it.searchAlbums }.mapNotNull { it.searchAlbums?.results?.albums }
     val album = states.distinctUntilChangedBy { it.album }.map { it.album }
 
-    override fun Flow<Intent>.increaseAction(state: () -> State) =
-        merge(
-            filterIsInstance<Intent.SearchAlbum>()
-                .flatMapLatest {
-                    flow {
-                        val query = it.query
-                        if (query.isBlank()) {
-                            return@flow
-                        }
-                        val searchAlbums = runCatching {
-                            vgmdbService.searchAlbums(query)
-                        }.onFailure {
-                            emit(ViewAction.Toast("get searchAlbums failed with q: $query"))
-                            return@flow
-                        }.getOrThrow()
-                        emit(StateAction.SetSearchAlbums(searchAlbums))
-                    }
-                },
-            filterIsInstance<Intent.ClickAlbum>()
-                .flatMapConcat {
-                    flow {
-                        val albumScreen = MainContract.Screen.Album(it.album.link)
-                        emit(EventAction.Navigate(albumScreen))
-                    }
-                },
-            filterIsInstance<Intent.ShowAlbum>()
-                .flatMapConcat {
-                    flow {
-                        val link = it.link
-                        val album = runCatching {
-                            vgmdbService.album(link)
-                        }.onFailure {
-                            emit(ViewAction.Toast("get album failed with link: $link"))
-                            return@flow
-                        }.getOrThrow()
-                        emit(StateAction.SetAlbum(album))
-                    }
-                }
-        )
+    override fun Flow<Intent>.increaseAction(state: () -> State) = merge(
+        mapLatestFlow<Intent.SearchAlbum> {
+            val query = it.query
+            if (query.isBlank()) {
+                return@mapLatestFlow
+            }
+            val searchAlbums = runCatching {
+                vgmdbService.searchAlbums(query)
+            }.onFailure {
+                emit(ViewAction.Toast("get searchAlbums failed with q: $query"))
+                return@mapLatestFlow
+            }.getOrThrow()
+            emit(StateAction.SetSearchAlbums(searchAlbums))
+        },
+        mapConcatFlow<Intent.ClickAlbum> {
+            val albumScreen = MainContract.Screen.Album(it.album.link)
+            emit(EventAction.Navigate(albumScreen))
+        },
+        mapConcatFlow<Intent.ShowAlbum> {
+            val link = it.link
+            val album = runCatching {
+                vgmdbService.album(link)
+            }.onFailure {
+                emit(ViewAction.Toast("get album failed with link: $link"))
+                return@mapConcatFlow
+            }.getOrThrow()
+            emit(StateAction.SetAlbum(album))
+        }
+    )
 
     override suspend fun EventAction.reduceEvent() {
         when (this) {
