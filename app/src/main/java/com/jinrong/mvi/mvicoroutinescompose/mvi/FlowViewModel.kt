@@ -2,6 +2,7 @@ package com.jinrong.mvi.mvicoroutinescompose.mvi
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.DEFAULT_CONCURRENCY
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
@@ -87,11 +89,16 @@ constructor(
 
     abstract fun StateAction.reduceState(state: State): State
 
-    protected inline fun <reified T: Intent> Flow<Intent>.mapConcatFlow(noinline block: suspend FlowCollector<FlowAction>.(T) -> Unit) =
-        filterIsInstance<T>().flatMapConcat { flow { block.invoke(this, it) } }
+    protected inline fun <reified T : Intent> Flow<Intent>.mapConcatFlow(noinline block: suspend FlowCollector<FlowAction>.(T) -> Unit) =
+        filterIsInstance<T>().flatMapConcat { flow { block(it) } }
 
-    protected inline fun <reified T: Intent> Flow<Intent>.mapLatestFlow(noinline block: suspend FlowCollector<FlowAction>.(T) -> Unit) =
-        filterIsInstance<T>().flatMapLatest { flow { block.invoke(this, it) } }
+    protected inline fun <reified T : Intent> Flow<Intent>.mapLatestFlow(noinline block: suspend FlowCollector<FlowAction>.(T) -> Unit) =
+        filterIsInstance<T>().flatMapLatest { flow { block(it) } }
+
+    protected inline fun <reified T : Intent> Flow<Intent>.mapMergeFlow(
+        concurrency: Int = DEFAULT_CONCURRENCY,
+        noinline block: suspend FlowCollector<FlowAction>.(T) -> Unit
+    ) = filterIsInstance<T>().flatMapMerge(concurrency) { flow { block(it) } }
 
     @Suppress("UNCHECKED_CAST")
     private fun <T: FlowAction> getClass(index: Int) =
