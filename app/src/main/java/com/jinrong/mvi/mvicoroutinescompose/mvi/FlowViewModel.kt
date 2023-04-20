@@ -102,7 +102,7 @@ constructor(
         }
         viewClass?.let {
             if (FlowAction::class.java.isAssignableFrom(it)) {
-                events
+                views
             }
         }
     }
