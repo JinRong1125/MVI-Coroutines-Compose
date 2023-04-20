@@ -45,7 +45,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import coil.compose.rememberAsyncImagePainter
-import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Action.View
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Screen
 import com.jinrong.mvi.mvicoroutinescompose.entity.Album
@@ -196,12 +195,12 @@ class MainActivity : ComponentActivity() {
     }
     
     @Composable 
-    private fun Subscribe(views: Flow<View>) {
+    private fun Subscribe(views: Flow<MainContract.ViewAction>) {
         LaunchedEffect(views) {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 views.collect {
                     when (it) {
-                        is View.Toast -> {
+                        is MainContract.ViewAction.Toast -> {
                             Toast.makeText(this@MainActivity, it.text, Toast.LENGTH_SHORT).show()
                         }
                     }

@@ -3,9 +3,11 @@ package com.jinrong.mvi.mvicoroutinescompose.main
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.navigation.NavHostController
-import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Action
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.State
+import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.EventAction
+import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.ViewAction
+import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.StateAction
 import com.jinrong.mvi.mvicoroutinescompose.service.VGMdbService
 import com.jinrong.mvi.mvicoroutinescompose.mvi.FlowViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +27,7 @@ class MainViewModel(
     coroutineScope: CoroutineScope,
     searchTextState: androidx.compose.runtime.State<TextFieldValue>,
     private val navHostController: NavHostController,
-) : FlowViewModel<Intent, State, Action, Action.Event, Action.View, Action.State>(
+) : FlowViewModel<Intent, State, EventAction, ViewAction, StateAction>(
     coroutineScope = coroutineScope,
     initializeState = State.initialize(),
     extraIntentFlows = listOf(
@@ -50,17 +52,17 @@ class MainViewModel(
                         val searchAlbums = runCatching {
                             vgmdbService.searchAlbums(query)
                         }.onFailure {
-                            emit(Action.View.Toast("get searchAlbums failed with q: $query"))
+                            emit(ViewAction.Toast("get searchAlbums failed with q: $query"))
                             return@flow
                         }.getOrThrow()
-                        emit(Action.State.SetSearchAlbums(searchAlbums))
+                        emit(StateAction.SetSearchAlbums(searchAlbums))
                     }
                 },
             filterIsInstance<Intent.ClickAlbum>()
                 .flatMapConcat {
                     flow {
                         val albumScreen = MainContract.Screen.Album(it.album.link)
-                        emit(Action.Event.Navigate(albumScreen))
+                        emit(EventAction.Navigate(albumScreen))
                     }
                 },
             filterIsInstance<Intent.ShowAlbum>()
@@ -70,25 +72,25 @@ class MainViewModel(
                         val album = runCatching {
                             vgmdbService.album(link)
                         }.onFailure {
-                            emit(Action.View.Toast("get album failed with link: $link"))
+                            emit(ViewAction.Toast("get album failed with link: $link"))
                             return@flow
                         }.getOrThrow()
-                        emit(Action.State.SetAlbum(album))
+                        emit(StateAction.SetAlbum(album))
                     }
                 }
         )
 
-    override suspend fun Action.Event.reduceEvent() {
+    override suspend fun EventAction.reduceEvent() {
         when (this) {
-            is Action.Event.Navigate -> withContext(Dispatchers.Main) {
+            is EventAction.Navigate -> withContext(Dispatchers.Main) {
                 navHostController.navigate(screen.route)
             }
         }
     }
 
-    override fun Action.State.reduceState(state: State) =
+    override fun StateAction.reduceState(state: State) =
         when (this) {
-            is Action.State.SetSearchAlbums -> state.copy(searchAlbums = searchAlbums)
-            is Action.State.SetAlbum -> state.copy(album = album)
+            is StateAction.SetSearchAlbums -> state.copy(searchAlbums = searchAlbums)
+            is StateAction.SetAlbum -> state.copy(album = album)
         }
 }

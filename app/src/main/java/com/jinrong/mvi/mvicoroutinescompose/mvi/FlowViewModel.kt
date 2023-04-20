@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onStart
 import kotlin.reflect.KClass
 
-abstract class FlowViewModel<Intent, State, Action : FlowAction, ActionEvent : Action, ActionView : Action, ActionState : Action>
+abstract class FlowViewModel<Intent, State, EventAction : FlowAction, ViewAction : FlowAction, StateAction : FlowAction>
 constructor(
     coroutineScope: CoroutineScope,
     initializeState: State,
@@ -26,9 +26,9 @@ constructor(
     extraIntentFlows: List<Flow<Intent>> = emptyList(),
     coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
-    private val eventClass = getClass<ActionEvent>(3)
-    private val viewClass = getClass<ActionView>(4)
-    private val stateClass = getClass<ActionState>(5)
+    private val eventClass = getClass<EventAction>(2)
+    private val viewClass = getClass<ViewAction>(3)
+    private val stateClass = getClass<StateAction>(4)
 
     private val intentFlow by lazy {
         MutableSharedFlow<Intent>(extraBufferCapacity = 64, replay = 64)
@@ -78,15 +78,15 @@ constructor(
 
     abstract fun Flow<Intent>.increaseAction(state: () -> State): Flow<Any>
 
-    open suspend fun ActionEvent.reduceEvent() {}
+    open suspend fun EventAction.reduceEvent() {}
 
-    abstract fun ActionState.reduceState(state: State): State
+    abstract fun StateAction.reduceState(state: State): State
 
     @Suppress("UNCHECKED_CAST")
-    private fun <T: Action> getClass(index: Int) =
+    private fun <T: FlowAction> getClass(index: Int) =
         (this::class.supertypes.first().arguments[index].type?.classifier as? KClass<*>)?.javaObjectType as? Class<T>
 
-    private fun <T: Any, R: Action> Flow<T>.mapCast(actionClass: Class<R>?) =
+    private fun <T: Any, R: FlowAction> Flow<T>.mapCast(actionClass: Class<R>?) =
         mapNotNull {
             runCatching {
                 actionClass?.cast(it)
@@ -94,17 +94,15 @@ constructor(
         }
 
     init {
-        getClass<Action>(2)?.let { actionClass ->
-            states
-            eventClass?.let {
-                if (actionClass.isAssignableFrom(it)) {
-                    events
-                }
+        states
+        eventClass?.let {
+            if (FlowAction::class.java.isAssignableFrom(it)) {
+                events
             }
-            viewClass?.let {
-                if (actionClass.isAssignableFrom(it)) {
-                    views
-                }
+        }
+        viewClass?.let {
+            if (FlowAction::class.java.isAssignableFrom(it)) {
+                events
             }
         }
     }
