@@ -16,12 +16,10 @@ class MainContract {
         val album: Album?
     ) {
         companion object {
-            fun initialize(): State {
-                return State(
-                    searchAlbums = null,
-                    album = null
-                )
-            }
+            fun initialize() = State(
+                searchAlbums = null,
+                album = null
+            )
         }
     }
 
