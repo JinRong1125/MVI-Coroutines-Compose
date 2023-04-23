@@ -83,7 +83,7 @@ constructor(
         intentFlow.tryEmit(intent)
     }
 
-    abstract fun Flow<Intent>.increaseAction(state: () -> State): Flow<Any>
+    abstract fun Flow<Intent>.increaseAction(state: () -> State): Flow<FlowAction>
 
     open suspend fun EventAction.reduceEvent() {}
 
