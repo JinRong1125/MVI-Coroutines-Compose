@@ -23,15 +23,8 @@ class MainContract {
         }
     }
 
-    sealed class EventAction : FlowAction {
-        data class Navigate(val screen: Screen): EventAction()
-    }
     sealed class ViewAction : FlowAction {
         data class Toast(val text: String) : ViewAction()
-    }
-    sealed class StateAction : FlowAction {
-        data class SetSearchAlbums(val searchAlbums: SearchAlbums): StateAction()
-        data class SetAlbum(val album: Album): StateAction()
     }
 
     sealed class Screen(val route: String) {

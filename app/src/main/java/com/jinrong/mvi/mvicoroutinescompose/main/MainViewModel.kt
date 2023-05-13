@@ -5,9 +5,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.navigation.NavHostController
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.State
-import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.EventAction
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.ViewAction
-import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.StateAction
 import com.jinrong.mvi.mvicoroutinescompose.service.VGMdbService
 import com.jinrong.mvi.mvicoroutinescompose.mvi.FlowViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +21,7 @@ class MainViewModel(
     coroutineScope: CoroutineScope,
     searchTextState: androidx.compose.runtime.State<TextFieldValue>,
     private val navHostController: NavHostController
-) : FlowViewModel<Intent, State, EventAction, ViewAction, StateAction>(
+) : FlowViewModel<Intent, State, ViewAction>(
     coroutineScope = coroutineScope,
     initializeState = State.initialize(),
     extraIntentFlows = listOf(
@@ -51,11 +49,13 @@ class MainViewModel(
                 emit(ViewAction.Toast("get searchAlbums failed with q: $query"))
                 return@mapLatestFlow
             }.getOrThrow()
-            emit(StateAction.SetSearchAlbums(searchAlbums))
+            setState(state().copy(searchAlbums = searchAlbums))
         },
         mapConcatFlow<Intent.ClickAlbum> {
             val albumScreen = MainContract.Screen.Album(it.album.link)
-            emit(EventAction.Navigate(albumScreen))
+            invokeEvent { withContext(Dispatchers.Main) {
+                navHostController.navigate(albumScreen.route)
+            } }
         },
         mapConcatFlow<Intent.ShowAlbum> {
             val link = it.link
@@ -65,21 +65,7 @@ class MainViewModel(
                 emit(ViewAction.Toast("get album failed with link: $link"))
                 return@mapConcatFlow
             }.getOrThrow()
-            emit(StateAction.SetAlbum(album))
+            setState(state().copy(album = album))
         }
     )
-
-    override suspend fun EventAction.reduceEvent() {
-        when (this) {
-            is EventAction.Navigate -> withContext(Dispatchers.Main) {
-                navHostController.navigate(screen.route)
-            }
-        }
-    }
-
-    override fun StateAction.reduceState(state: State) =
-        when (this) {
-            is StateAction.SetSearchAlbums -> state.copy(searchAlbums = searchAlbums)
-            is StateAction.SetAlbum -> state.copy(album = album)
-        }
 }
