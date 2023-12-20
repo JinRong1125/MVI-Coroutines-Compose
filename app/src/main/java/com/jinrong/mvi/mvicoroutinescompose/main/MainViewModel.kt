@@ -5,9 +5,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.navigation.NavHostController
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.State
-import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.ViewAction
 import com.jinrong.mvi.mvicoroutinescompose.service.VGMdbService
 import com.jinrong.mvi.mvicoroutinescompose.mvi.FlowViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -20,8 +20,9 @@ import kotlinx.coroutines.withContext
 class MainViewModel(
     coroutineScope: CoroutineScope,
     searchTextState: androidx.compose.runtime.State<TextFieldValue>,
+    private val view: MainContract.View,
     private val navHostController: NavHostController
-) : FlowViewModel<Intent, State, ViewAction>(
+) : FlowViewModel<Intent, State>(
     coroutineScope = coroutineScope,
     initializeState = State.initialize(),
     extraIntentFlows = listOf(
@@ -32,6 +33,8 @@ class MainViewModel(
             .map { Intent.SearchAlbum(it.text) }
     )
 ) {
+    override val stateClass = State::class.java
+
     private val vgmdbService = VGMdbService()
 
     val searchAlbums = states.distinctUntilChangedBy { it.searchAlbums }.mapNotNull { it.searchAlbums?.results?.albums }
@@ -45,8 +48,10 @@ class MainViewModel(
             }
             val searchAlbums = runCatching {
                 vgmdbService.searchAlbums(query)
-            }.onFailure {
-                emit(ViewAction.Toast("get searchAlbums failed with q: $query"))
+            }.onFailure { throwable ->
+                if (throwable !is CancellationException) {
+                    invokeView { view.showToast("get searchAlbums failed with q: $query") }
+                }
                 return@mapLatestFlow
             }.getOrThrow()
             setState(state().copy(searchAlbums = searchAlbums))
@@ -62,7 +67,7 @@ class MainViewModel(
             val album = runCatching {
                 vgmdbService.album(link)
             }.onFailure {
-                emit(ViewAction.Toast("get album failed with link: $link"))
+                invokeView { view.showToast("get album failed with link: $link") }
                 return@mapConcatFlow
             }.getOrThrow()
             setState(state().copy(album = album))

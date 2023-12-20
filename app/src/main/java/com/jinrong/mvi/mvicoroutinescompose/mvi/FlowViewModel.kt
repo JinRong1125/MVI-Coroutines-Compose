@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.flatMapConcat
@@ -17,16 +18,15 @@ import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.reflect.KClass
 
-abstract class FlowViewModel<Intent, State, ViewAction : FlowAction>
+abstract class FlowViewModel<Intent, State>
 constructor(
     coroutineScope: CoroutineScope,
     initializeState: State,
@@ -36,11 +36,11 @@ constructor(
     enableEvent: Boolean = true,
     enableView: Boolean = true
 ) {
-    protected data class StateAction<T>(val state: T) : FlowAction
-    protected data class EventAction(val function: suspend () -> Unit) : FlowAction
+    abstract val stateClass: Class<State>
 
-    private val stateClass = getClass<State>(1)
-    private val viewClass = getClass<ViewAction>(2)
+    protected data class StateAction<State>(val state: State) : FlowAction
+    protected data class EventAction(val function: suspend () -> Unit) : FlowAction
+    data class ViewAction(val function: suspend () -> Unit) : FlowAction
 
     private val intentFlow by lazy {
         MutableSharedFlow<Intent>(extraBufferCapacity = Int.MAX_VALUE, replay = Int.MAX_VALUE)
@@ -68,24 +68,19 @@ constructor(
     }
     private val events by lazy {
         actionFlow
-            .onEach {
-                (it as? EventAction)?.function?.invoke()
-            }
+            .onEach { (it as? EventAction)?.function?.invoke() }
             .flowOn(coroutineContext)
             .launchIn(coroutineScope)
     }
     val views by lazy {
         actionFlow
-            .mapCast(viewClass)
+            .mapNotNull { it as? ViewAction }
             .flowOn(coroutineContext)
             .shareIn(coroutineScope, SharingStarted.Eagerly)
     }
     protected val states: StateFlow<State> by lazy {
         actionFlow
-            .mapNotNull {
-                (it as? StateAction<*>)?.state
-            }
-            .mapCast(stateClass)
+            .cast<StateAction<State>>()
             .flowOn(coroutineContext)
             .stateIn(coroutineScope, SharingStarted.Eagerly, initializeState)
     }
@@ -111,16 +106,16 @@ constructor(
         emit(EventAction(function))
     }
 
+    protected suspend inline fun FlowCollector<FlowAction>.invokeView(noinline function: () -> Unit) {
+        emit(ViewAction(function))
+    }
+
     protected suspend inline fun FlowCollector<FlowAction>.setState(state: State) {
         emit(StateAction(state))
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private fun <T> getClass(index: Int) =
-        (this::class.supertypes.first().arguments[index].type?.classifier as? KClass<*>)?.javaObjectType as? Class<T>
-
-    private fun <T, R> Flow<T>.mapCast(targetClass: Class<R>?) =
-        mapNotNull { runCatching { targetClass?.cast(it) }.getOrNull() }
+    private inline fun <reified T : StateAction<State>> Flow<FlowAction>.cast() =
+        mapNotNull { (it as? T)?.state }
 
     init {
         states

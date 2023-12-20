@@ -2,7 +2,6 @@ package com.jinrong.mvi.mvicoroutinescompose.main
 
 import com.jinrong.mvi.mvicoroutinescompose.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
-import com.jinrong.mvi.mvicoroutinescompose.mvi.FlowAction
 
 class MainContract {
     sealed class Intent {
@@ -23,10 +22,6 @@ class MainContract {
         }
     }
 
-    sealed class ViewAction : FlowAction {
-        data class Toast(val text: String) : ViewAction()
-    }
-
     sealed class Screen(val route: String) {
         object Search : Screen("search")
         data class Album(val link: String) : Screen("album?link=$link") {
@@ -35,5 +30,9 @@ class MainContract {
                 const val ROUTE = "album?link={link}"
             }
         }
+    }
+
+    interface View {
+        fun showToast(text: String)
     }
 }

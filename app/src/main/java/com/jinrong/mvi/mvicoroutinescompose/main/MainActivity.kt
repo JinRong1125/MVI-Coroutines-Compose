@@ -49,16 +49,23 @@ import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Screen
 import com.jinrong.mvi.mvicoroutinescompose.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
+import com.jinrong.mvi.mvicoroutinescompose.mvi.FlowViewModel
 import kotlinx.coroutines.flow.Flow
 
 class MainActivity : ComponentActivity() {
+
+    private val view = object : MainContract.View {
+        override fun showToast(text: String) {
+            Toast.makeText(this@MainActivity, text, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val navController = rememberNavController()
             val searchText = remember { mutableStateOf(TextFieldValue("sakura no toki")) }
-            val mainViewModel = MainViewModel(lifecycleScope, searchText, navController)
+            val mainViewModel = MainViewModel(lifecycleScope, searchText, view, navController)
                 .apply {
                     Subscribe(views = views)
                 }
@@ -195,15 +202,11 @@ class MainActivity : ComponentActivity() {
     }
     
     @Composable 
-    private fun Subscribe(views: Flow<MainContract.ViewAction>) {
+    private fun Subscribe(views: Flow<FlowViewModel.ViewAction>) {
         LaunchedEffect(views) {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 views.collect {
-                    when (it) {
-                        is MainContract.ViewAction.Toast -> {
-                            Toast.makeText(this@MainActivity, it.text, Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                    it.function()
                 }
             }
         }
