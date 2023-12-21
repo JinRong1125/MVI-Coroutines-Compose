@@ -19,22 +19,19 @@ import kotlinx.coroutines.withContext
 
 class MainViewModel(
     coroutineScope: CoroutineScope,
+    view: MainContract.View,
     searchTextState: androidx.compose.runtime.State<TextFieldValue>,
-    private val view: MainContract.View,
     private val navHostController: NavHostController
-) : FlowViewModel<Intent, State>(
+) : FlowViewModel<Intent, State, MainContract.View>(
     coroutineScope = coroutineScope,
+    view = view,
     initializeState = State.initialize(),
     extraIntentFlows = listOf(
         snapshotFlow {
             searchTextState.value
-        }
-            .distinctUntilChangedBy { it.text }
-            .map { Intent.SearchAlbum(it.text) }
+        }.map { Intent.SearchAlbum(it.text) }
     )
 ) {
-    override val stateClass = State::class.java
-
     private val vgmdbService = VGMdbService()
 
     val searchAlbums = states.distinctUntilChangedBy { it.searchAlbums }.mapNotNull { it.searchAlbums?.results?.albums }
@@ -50,9 +47,9 @@ class MainViewModel(
                 vgmdbService.searchAlbums(query)
             }.onFailure { throwable ->
                 if (throwable !is CancellationException) {
-                    invokeView { view.showToast("get searchAlbums failed with q: $query") }
+                    invokeView { showToast("get searchAlbums failed with q: $query") }
+                    return@mapLatestFlow
                 }
-                return@mapLatestFlow
             }.getOrThrow()
             setState(state().copy(searchAlbums = searchAlbums))
         },
@@ -67,7 +64,7 @@ class MainViewModel(
             val album = runCatching {
                 vgmdbService.album(link)
             }.onFailure {
-                invokeView { view.showToast("get album failed with link: $link") }
+                invokeView { showToast("get album failed with link: $link") }
                 return@mapConcatFlow
             }.getOrThrow()
             setState(state().copy(album = album))

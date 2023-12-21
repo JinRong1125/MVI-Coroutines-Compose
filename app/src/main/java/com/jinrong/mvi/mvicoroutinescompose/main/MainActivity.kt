@@ -65,10 +65,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             val searchText = remember { mutableStateOf(TextFieldValue("sakura no toki")) }
-            val mainViewModel = MainViewModel(lifecycleScope, searchText, view, navController)
-                .apply {
-                    Subscribe(views = views)
+            val mainViewModel = MainViewModel(lifecycleScope, view, searchText, navController)
+            LaunchedEffect(mainViewModel.views) {
+                repeatOnLifecycle(Lifecycle.State.CREATED) {
+                    mainViewModel.views.collect {
+                        it.function()
+                    }
                 }
+            }
             NavHost(
                 navController = navController,
                 startDestination = Screen.Search.route,
@@ -197,17 +201,6 @@ class MainActivity : ComponentActivity() {
                         .padding(start = 10.dp)
                         .weight(2F)
                 )
-            }
-        }
-    }
-    
-    @Composable 
-    private fun Subscribe(views: Flow<FlowViewModel.ViewAction>) {
-        LaunchedEffect(views) {
-            repeatOnLifecycle(Lifecycle.State.CREATED) {
-                views.collect {
-                    it.function()
-                }
             }
         }
     }
