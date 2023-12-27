@@ -2,6 +2,7 @@ package com.jinrong.mvi.mvicoroutinescompose.main
 
 import com.jinrong.mvi.mvicoroutinescompose.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
+import com.jinrong.mvi.mvicoroutinescompose.mvi.FlowViewModel
 
 class MainContract {
     sealed class Intent {
@@ -35,4 +36,7 @@ class MainContract {
     interface View {
         fun showToast(text: String)
     }
+
+    data class CreateViewAction(override val function: () -> Unit): FlowViewModel.ViewAction
+    data class ResumeViewAction(override val function: () -> Unit): FlowViewModel.ViewAction
 }

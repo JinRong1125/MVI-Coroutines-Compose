@@ -49,8 +49,7 @@ import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Screen
 import com.jinrong.mvi.mvicoroutinescompose.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
-import com.jinrong.mvi.mvicoroutinescompose.mvi.FlowViewModel
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -65,13 +64,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             val searchText = remember { mutableStateOf(TextFieldValue("sakura no toki")) }
-            val mainViewModel = MainViewModel(lifecycleScope, view, searchText, navController)
+            val mainViewModel = MainViewModel(lifecycleScope, searchText, view, navController)
             LaunchedEffect(mainViewModel.views) {
-                repeatOnLifecycle(Lifecycle.State.CREATED) {
-                    mainViewModel.views.collect {
-                        it.function()
-                    }
-                }
+                lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.CREATED) {
+                    mainViewModel.createViewAction.collect { it.function() }
+                } }
+                lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                    mainViewModel.resumeViewAction.collect { it.function() }
+                } }
             }
             NavHost(
                 navController = navController,
