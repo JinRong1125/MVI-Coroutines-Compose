@@ -33,10 +33,5 @@ class MainContract {
         }
     }
 
-    interface View {
-        fun showToast(text: String)
-    }
-
-    data class CreateViewAction(override val function: () -> Unit): FlowViewModel.ViewAction
-    data class ResumeViewAction(override val function: () -> Unit): FlowViewModel.ViewAction
+    data class ToastAction(val message: String): FlowViewModel.EffectAction
 }

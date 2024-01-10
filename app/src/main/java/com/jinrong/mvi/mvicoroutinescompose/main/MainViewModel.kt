@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
@@ -21,7 +22,6 @@ import kotlinx.coroutines.withContext
 class MainViewModel(
     coroutineScope: CoroutineScope,
     searchTextState: androidx.compose.runtime.State<TextFieldValue>,
-    private val view: MainContract.View,
     private val navHostController: NavHostController
 ) : FlowViewModel<Intent, State>(
     coroutineScope = coroutineScope,
@@ -29,18 +29,30 @@ class MainViewModel(
     extraIntentFlows = listOf(
         snapshotFlow {
             searchTextState.value
-        }.map { Intent.SearchAlbum(it.text) }
+        }
+            .distinctUntilChangedBy { it.text }
+            .map { Intent.SearchAlbum(it.text) }
     )
 ) {
     private val vgmdbService = VGMdbService()
 
     val searchAlbums by lazy(LazyThreadSafetyMode.NONE) {
-        states.distinctUntilChangedBy { it.searchAlbums }.mapNotNull { it.searchAlbums?.results?.albums }
+        states
+            .distinctUntilChangedBy { it.searchAlbums }
+            .mapNotNull { it.searchAlbums?.results?.albums }
+            .flowOn(Dispatchers.IO)
     }
-    val album by lazy(LazyThreadSafetyMode.NONE) { states.distinctUntilChangedBy { it.album }.map { it.album } }
-
-    val createViewAction by lazy(LazyThreadSafetyMode.NONE) { views.filterIsInstance<MainContract.CreateViewAction>() }
-    val resumeViewAction by lazy(LazyThreadSafetyMode.NONE) { views.filterIsInstance<MainContract.ResumeViewAction>() }
+    val album by lazy(LazyThreadSafetyMode.NONE) {
+        states
+            .distinctUntilChangedBy { it.album }
+            .map { it.album }
+            .flowOn(Dispatchers.IO)
+    }
+    val toastAction by lazy(LazyThreadSafetyMode.NONE) {
+        effects
+            .filterIsInstance<MainContract.ToastAction>()
+            .flowOn(Dispatchers.IO)
+    }
 
     init {
         events
@@ -56,10 +68,13 @@ class MainViewModel(
                 vgmdbService.searchAlbums(query)
             }.onFailure { throwable ->
                 if (throwable !is CancellationException) {
-                    emit(MainContract.CreateViewAction { view.showToast("get searchAlbums failed with q: $query") })
-                    return@mapLatestFlow
+                    emit(MainContract.ToastAction("get searchAlbums failed by q: $query"))
                 }
+                return@mapLatestFlow
             }.getOrThrow()
+            if (searchAlbums.results.albums.isEmpty()) {
+                emit(MainContract.ToastAction("no albums found by q: $query"))
+            }
             emit(StateAction(state().copy(searchAlbums = searchAlbums)))
         },
         mapConcatFlow<Intent.ClickAlbum> {
@@ -73,7 +88,7 @@ class MainViewModel(
             val album = runCatching {
                 vgmdbService.album(link)
             }.onFailure {
-                emit(MainContract.CreateViewAction { view.showToast("get album failed with link: $link") })
+                emit(MainContract.ToastAction("get album failed by link: $link"))
                 return@mapConcatFlow
             }.getOrThrow()
             emit(StateAction(state().copy(album = album)))

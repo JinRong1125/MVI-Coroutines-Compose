@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -49,29 +50,21 @@ import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Screen
 import com.jinrong.mvi.mvicoroutinescompose.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 
 class MainActivity : ComponentActivity() {
-
-    private val view = object : MainContract.View {
-        override fun showToast(text: String) {
-            Toast.makeText(this@MainActivity, text, Toast.LENGTH_SHORT).show()
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val navController = rememberNavController()
-            val searchText = remember { mutableStateOf(TextFieldValue("sakura no toki")) }
-            val mainViewModel = MainViewModel(lifecycleScope, searchText, view, navController)
-            LaunchedEffect(mainViewModel.views) {
-                lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.CREATED) {
-                    mainViewModel.createViewAction.collect { it.function() }
-                } }
-                lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                    mainViewModel.resumeViewAction.collect { it.function() }
-                } }
+            val searchText = remember { mutableStateOf(TextFieldValue("himawari")) }
+            val mainViewModel = MainViewModel(lifecycleScope, searchText, navController)
+            LaunchedEffect(mainViewModel.effects) {
+                repeatOnCreated(mainViewModel.toastAction) {
+                    Toast.makeText(this@MainActivity, it.message, Toast.LENGTH_SHORT).show()
+                }
             }
             NavHost(
                 navController = navController,
@@ -202,6 +195,12 @@ class MainActivity : ComponentActivity() {
                         .weight(2F)
                 )
             }
+        }
+    }
+
+    private suspend inline fun <T> LifecycleOwner.repeatOnCreated(flow: Flow<T>, flowCollector: FlowCollector<T>) {
+        repeatOnLifecycle(Lifecycle.State.CREATED) {
+            flow.collect(flowCollector)
         }
     }
 }

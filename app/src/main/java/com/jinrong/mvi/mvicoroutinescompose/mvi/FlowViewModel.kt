@@ -33,7 +33,7 @@ abstract class FlowViewModel<Intent, State>(
 ) {
     protected data class StateAction<State>(val state: State) : FlowAction
     protected data class EventAction(val function: suspend () -> Unit) : FlowAction
-    interface ViewAction : FlowAction { val function: () -> Unit }
+    interface EffectAction : FlowAction
 
     private val intentFlow by lazy(LazyThreadSafetyMode.NONE) {
         MutableSharedFlow<Intent>(extraBufferCapacity = Int.MAX_VALUE, replay = Int.MAX_VALUE)
@@ -64,9 +64,9 @@ abstract class FlowViewModel<Intent, State>(
             .flowOn(coroutineContext)
             .stateIn(coroutineScope, SharingStarted.Eagerly, initializeState)
     }
-    val views by lazy(LazyThreadSafetyMode.NONE) {
+    val effects by lazy(LazyThreadSafetyMode.NONE) {
         actionFlow
-            .filterIsInstance<ViewAction>()
+            .filterIsInstance<EffectAction>()
             .flowOn(coroutineContext)
             .shareIn(coroutineScope, SharingStarted.Eagerly)
     }
