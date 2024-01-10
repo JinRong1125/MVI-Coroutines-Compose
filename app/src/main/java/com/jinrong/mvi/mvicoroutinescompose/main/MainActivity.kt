@@ -43,6 +43,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -55,15 +56,24 @@ import com.jinrong.mvi.mvicoroutinescompose.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
+import org.koin.core.context.loadKoinModules
+import org.koin.dsl.module
 
 class MainActivity : ComponentActivity() {
+
+    private val searchText by lazy(LazyThreadSafetyMode.NONE) {
+        mutableStateOf(TextFieldValue("himawari"))
+    }
+    private val mainViewModel by lazy(LazyThreadSafetyMode.NONE) {
+        MainViewModel(lifecycleScope, searchText)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val navController = rememberNavController()
-            val searchText = remember { mutableStateOf(TextFieldValue("himawari")) }
-            val mainViewModel = MainViewModel(lifecycleScope, searchText, navController)
+            val navModule = module { single<NavHostController> { navController } }
+            loadKoinModules(navModule)
             LaunchedEffect(mainViewModel.effects) {
                 repeatOnCreated(mainViewModel.toastAction) {
                     Toast.makeText(this@MainActivity, it.message, Toast.LENGTH_SHORT).show()
@@ -89,7 +99,7 @@ class MainActivity : ComponentActivity() {
                     val clickAlbum: (SearchAlbums.Results.Album) -> Unit = {
                         mainViewModel.send(Intent.ClickAlbum(it))
                     }
-                    SearchScreen(searchAlbums, searching, searchText, clickAlbum)
+                    SearchScreen(searchText, searchAlbums, searching, clickAlbum)
                 }
                 composable(
                     route = Screen.Album.ROUTE,
@@ -117,11 +127,12 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun SearchScreen(
+        searchText: MutableState<TextFieldValue>,
         searchAlbums: State<List<SearchAlbums.Results.Album>>,
         searching: State<Boolean>,
-        searchText: MutableState<TextFieldValue>,
         onClickAlbum: (SearchAlbums.Results.Album) -> Unit
     ) {
+        remember { searchText }
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally

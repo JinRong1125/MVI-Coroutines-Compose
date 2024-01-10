@@ -5,8 +5,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.navigation.NavHostController
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.State
-import com.jinrong.mvi.mvicoroutinescompose.service.VGMdbService
 import com.jinrong.mvi.mvicoroutinescompose.mvi.FlowViewModel
+import com.jinrong.mvi.mvicoroutinescompose.service.VGMdbService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,11 +18,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.withContext
+import org.koin.core.component.inject
 
 class MainViewModel(
     coroutineScope: CoroutineScope,
     searchTextState: androidx.compose.runtime.State<TextFieldValue>,
-    private val navHostController: NavHostController
 ) : FlowViewModel<Intent, State>(
     coroutineScope = coroutineScope,
     initializeState = State.initialize(),
@@ -34,7 +34,8 @@ class MainViewModel(
             .map { Intent.SearchAlbum(it.text) }
     )
 ) {
-    private val vgmdbService = VGMdbService()
+    private val vgmdbService by inject<VGMdbService>()
+    private val navHostController by inject<NavHostController>()
 
     val searchAlbums by lazy(LazyThreadSafetyMode.NONE) {
         states

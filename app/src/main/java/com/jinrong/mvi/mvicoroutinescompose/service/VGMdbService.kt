@@ -15,14 +15,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
-class VGMdbService {
+interface VGMdbService {
+    suspend fun searchAlbums(query: String): SearchAlbums
+    suspend fun album(path: String): Album
+}
+
+class VGMdbServiceImpl : VGMdbService {
 
     companion object {
         private const val HOST_VGMDB = "vgmdb.info"
         private const val PATH_SEARCH_ALBUMS = "search/albums"
     }
 
-    private val httpClient by lazy {
+    private val httpClient by lazy(LazyThreadSafetyMode.NONE) {
         HttpClient(OkHttp) {
             install(ContentNegotiation) {
                 json(
@@ -34,7 +39,7 @@ class VGMdbService {
         }
     }
 
-    suspend fun searchAlbums(query: String): SearchAlbums = withContext(Dispatchers.IO) {
+    override suspend fun searchAlbums(query: String): SearchAlbums = withContext(Dispatchers.IO) {
         httpClient.get {
             url {
                 protocol = URLProtocol.HTTPS
@@ -45,7 +50,7 @@ class VGMdbService {
         }.body()
     }
 
-    suspend fun album(path: String): Album = withContext(Dispatchers.IO) {
+    override suspend fun album(path: String): Album = withContext(Dispatchers.IO) {
         httpClient.get {
             url {
                 protocol = URLProtocol.HTTPS

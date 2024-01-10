@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.core.component.KoinComponent
 
 abstract class FlowViewModel<Intent, State>(
     coroutineScope: CoroutineScope,
@@ -30,7 +31,7 @@ abstract class FlowViewModel<Intent, State>(
     initializeIntents: List<Intent> = emptyList(),
     extraIntentFlows: List<Flow<Intent>> = emptyList(),
     coroutineContext: CoroutineContext = Dispatchers.Default
-) {
+): KoinComponent {
     protected data class StateAction<State>(val state: State) : FlowAction
     protected data class EventAction(val function: suspend () -> Unit) : FlowAction
     interface EffectAction : FlowAction
