@@ -13,12 +13,14 @@ class MainContract {
 
     data class State(
         val searchAlbums: SearchAlbums?,
-        val album: Album?
+        val album: Album?,
+        val searching: Boolean
     ) {
         companion object {
             fun initialize() = State(
                 searchAlbums = null,
-                album = null
+                album = null,
+                searching = false
             )
         }
     }

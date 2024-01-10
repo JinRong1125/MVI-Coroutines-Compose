@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -29,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -78,10 +81,15 @@ class MainActivity : ComponentActivity() {
                             initialValue = emptyList(),
                             minActiveState = Lifecycle.State.CREATED
                         )
+                    val searching = mainViewModel.searching
+                        .collectAsStateWithLifecycle(
+                            initialValue = false,
+                            minActiveState = Lifecycle.State.CREATED
+                        )
                     val clickAlbum: (SearchAlbums.Results.Album) -> Unit = {
                         mainViewModel.send(Intent.ClickAlbum(it))
                     }
-                    SearchScreen(searchAlbums, searchText, clickAlbum)
+                    SearchScreen(searchAlbums, searching, searchText, clickAlbum)
                 }
                 composable(
                     route = Screen.Album.ROUTE,
@@ -110,10 +118,14 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun SearchScreen(
         searchAlbums: State<List<SearchAlbums.Results.Album>>,
+        searching: State<Boolean>,
         searchText: MutableState<TextFieldValue>,
         onClickAlbum: (SearchAlbums.Results.Album) -> Unit
     ) {
-        Column {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             OutlinedTextField(
                 value = searchText.value,
                 onValueChange = { searchText.value = it },
@@ -121,28 +133,34 @@ class MainActivity : ComponentActivity() {
                     .fillMaxWidth()
                     .padding(10.dp)
             )
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(5.dp)
-            ) {
-                items(items = searchAlbums.value) {
-                    Card(
-                        shape = RoundedCornerShape(2.dp),
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .clickable(
-                                onClick = { onClickAlbum(it) }
-                            ),
-                        elevation = CardDefaults.cardElevation(
-                            defaultElevation = 4.dp
-                        )
-                    ) {
-                        Text(
-                            text = it.titles.ja,
+            if (searching.value) {
+                CircularProgressIndicator(
+                    modifier = Modifier.padding(top = 5.dp)
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(5.dp)
+                ) {
+                    items(items = searchAlbums.value) {
+                        Card(
+                            shape = RoundedCornerShape(2.dp),
                             modifier = Modifier
-                                .fillMaxWidth()
                                 .padding(10.dp)
-                        )
+                                .clickable(
+                                    onClick = { onClickAlbum(it) }
+                                ),
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 4.dp
+                            )
+                        ) {
+                            Text(
+                                text = it.titles.ja,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(10.dp)
+                            )
+                        }
                     }
                 }
             }

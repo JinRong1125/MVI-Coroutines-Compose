@@ -48,6 +48,12 @@ class MainViewModel(
             .map { it.album }
             .flowOn(Dispatchers.IO)
     }
+    val searching by lazy(LazyThreadSafetyMode.NONE) {
+        states
+            .distinctUntilChangedBy { it.searching }
+            .map { it.searching }
+            .flowOn(Dispatchers.IO)
+    }
     val toastAction by lazy(LazyThreadSafetyMode.NONE) {
         effects
             .filterIsInstance<MainContract.ToastAction>()
@@ -64,9 +70,11 @@ class MainViewModel(
             if (query.isBlank()) {
                 return@mapLatestFlow
             }
+            emit(StateAction(state().copy(searchAlbums = null, searching = true)))
             val searchAlbums = runCatching {
                 vgmdbService.searchAlbums(query)
             }.onFailure { throwable ->
+                emit(StateAction(state().copy(searching = false)))
                 if (throwable !is CancellationException) {
                     emit(MainContract.ToastAction("get searchAlbums failed by q: $query"))
                 }
@@ -75,7 +83,7 @@ class MainViewModel(
             if (searchAlbums.results.albums.isEmpty()) {
                 emit(MainContract.ToastAction("no albums found by q: $query"))
             }
-            emit(StateAction(state().copy(searchAlbums = searchAlbums)))
+            emit(StateAction(state().copy(searchAlbums = searchAlbums, searching = false)))
         },
         mapConcatFlow<Intent.ClickAlbum> {
             val albumScreen = MainContract.Screen.Album(it.album.link)
