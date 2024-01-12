@@ -67,11 +67,8 @@ class MainViewModel(
 
     override fun Flow<Intent>.increaseAction(state: () -> State) = merge(
         mapLatestFlow<Intent.SearchAlbum> {
-            val query = it.query
-            if (query.isBlank()) {
-                return@mapLatestFlow
-            }
             emit(StateAction(state().copy(searchAlbums = null, searching = true)))
+            val query = it.query
             val searchAlbums = runCatching {
                 vgmdbService.searchAlbums(query)
             }.onFailure { throwable ->
