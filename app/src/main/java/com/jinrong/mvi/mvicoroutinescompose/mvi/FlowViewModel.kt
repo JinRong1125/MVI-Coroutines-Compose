@@ -1,5 +1,6 @@
 package com.jinrong.mvi.mvicoroutinescompose.mvi
 
+import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -16,7 +17,7 @@ import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
@@ -32,7 +33,10 @@ abstract class FlowViewModel<Intent, State>(
     extraIntentFlows: List<Flow<Intent>> = emptyList(),
     val coroutineContext: CoroutineContext = Dispatchers.Default
 ): KoinComponent {
-    protected data class StateAction<State>(val state: State) : FlowAction
+    protected data class StateAction<State>(
+        val state: State,
+        val syncJob: CompletableJob? = null
+    ) : FlowAction
     interface EventAction: FlowAction {
         val function: suspend () -> Unit
     }
@@ -62,7 +66,14 @@ abstract class FlowViewModel<Intent, State>(
     protected val states by lazy(LazyThreadSafetyMode.NONE) {
         actionFlow
             .filterIsInstance<StateAction<State>>()
-            .map { it.state }
+            .flatMapConcat {
+                val syncJob = it.syncJob
+                flow {
+                    emit(it.state)
+                }.onCompletion {
+                    syncJob?.complete()
+                }
+            }
             .flowOn(coroutineContext)
             .stateIn(coroutineScope, SharingStarted.Eagerly, initializeState)
     }
