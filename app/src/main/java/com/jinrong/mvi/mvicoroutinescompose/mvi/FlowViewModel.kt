@@ -26,15 +26,16 @@ import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 
 abstract class FlowViewModel<Intent, State>(
-    coroutineScope: CoroutineScope,
+    val coroutineScope: CoroutineScope,
     initializeState: State,
     initializeIntents: List<Intent> = emptyList(),
     extraIntentFlows: List<Flow<Intent>> = emptyList(),
-    coroutineContext: CoroutineContext = Dispatchers.Default
+    val coroutineContext: CoroutineContext = Dispatchers.Default
 ): KoinComponent {
     protected data class StateAction<State>(val state: State) : FlowAction
-    protected data class EventAction(val function: suspend () -> Unit) : FlowAction
-    interface EffectAction : FlowAction
+    interface EventAction: FlowAction {
+        val function: suspend () -> Unit
+    }
 
     private val intentFlow by lazy(LazyThreadSafetyMode.NONE) {
         MutableSharedFlow<Intent>(extraBufferCapacity = Int.MAX_VALUE, replay = Int.MAX_VALUE)
@@ -65,18 +66,8 @@ abstract class FlowViewModel<Intent, State>(
             .flowOn(coroutineContext)
             .stateIn(coroutineScope, SharingStarted.Eagerly, initializeState)
     }
-    val effects by lazy(LazyThreadSafetyMode.NONE) {
+    val extras: Flow<FlowAction> by lazy(LazyThreadSafetyMode.NONE) {
         actionFlow
-            .filterIsInstance<EffectAction>()
-            .flowOn(coroutineContext)
-            .shareIn(coroutineScope, SharingStarted.Eagerly)
-    }
-    protected val events by lazy(LazyThreadSafetyMode.NONE) {
-        actionFlow
-            .filterIsInstance<EventAction>()
-            .onEach { it.function() }
-            .flowOn(coroutineContext)
-            .launchIn(coroutineScope)
     }
 
     fun send(intent: Intent) {
@@ -85,14 +76,23 @@ abstract class FlowViewModel<Intent, State>(
 
     abstract fun Flow<Intent>.increaseAction(state: () -> State = { states.value }): Flow<FlowAction>
 
-    protected inline fun <reified T : Intent> Flow<Intent>.mapConcatFlow(noinline block: suspend FlowCollector<FlowAction>.(T) -> Unit) =
-        filterIsInstance<T>().flatMapConcat { flow { block(it) } }
+    protected inline fun <reified T : Intent> Flow<Intent>.mapConcatFlow(
+        noinline block: suspend FlowCollector<FlowAction>.(T) -> Unit
+    ) = filterIsInstance<T>().flatMapConcat { flow { block(it) } }
 
-    protected inline fun <reified T : Intent> Flow<Intent>.mapLatestFlow(noinline block: suspend FlowCollector<FlowAction>.(T) -> Unit) =
-        filterIsInstance<T>().flatMapLatest { flow { block(it) } }
+    protected inline fun <reified T : Intent> Flow<Intent>.mapLatestFlow(
+        noinline block: suspend FlowCollector<FlowAction>.(T) -> Unit
+    ) = filterIsInstance<T>().flatMapLatest { flow { block(it) } }
 
     protected inline fun <reified T : Intent> Flow<Intent>.mapMergeFlow(
         concurrency: Int = DEFAULT_CONCURRENCY,
         noinline block: suspend FlowCollector<FlowAction>.(T) -> Unit
     ) = filterIsInstance<T>().flatMapMerge(concurrency) { flow { block(it) } }
+
+    inline fun <reified T : EventAction> reduceEvent() =
+        extras
+            .filterIsInstance<T>()
+            .onEach { it.function() }
+            .flowOn(coroutineContext)
+            .launchIn(coroutineScope)
 }

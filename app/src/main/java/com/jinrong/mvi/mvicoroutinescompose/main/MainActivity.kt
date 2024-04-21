@@ -65,7 +65,14 @@ class MainActivity : ComponentActivity() {
         mutableStateOf(TextFieldValue("kuuki"))
     }
     private val mainViewModel by lazy(LazyThreadSafetyMode.NONE) {
-        MainViewModel(lifecycleScope, searchText)
+        MainViewModel(lifecycleScope, searchText, view)
+    }
+    private val view by lazy(LazyThreadSafetyMode.NONE) {
+        object : MainContract.View {
+            override fun showToast(message: String) {
+                Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,11 +81,6 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             val navModule = module { single<NavHostController> { navController } }
             loadKoinModules(navModule)
-            LaunchedEffect(mainViewModel.effects) {
-                repeatOnCreated(mainViewModel.toastAction) {
-                    Toast.makeText(this@MainActivity, it.message, Toast.LENGTH_SHORT).show()
-                }
-            }
             NavHost(
                 navController = navController,
                 startDestination = Screen.Search.route,

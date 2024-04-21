@@ -35,5 +35,10 @@ class MainContract {
         }
     }
 
-    data class ToastAction(val message: String): FlowViewModel.EffectAction
+    data class NavigationAction(override val function: suspend () -> Unit) : FlowViewModel.EventAction
+    data class ViewAction(override val function: suspend () -> Unit) : FlowViewModel.EventAction
+
+    interface View {
+        fun showToast(message: String)
+    }
 }
