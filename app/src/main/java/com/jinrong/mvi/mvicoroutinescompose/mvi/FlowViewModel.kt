@@ -31,14 +31,19 @@ abstract class FlowViewModel<Intent, State>(
     initializeState: State,
     initializeIntents: List<Intent> = emptyList(),
     extraIntentFlows: List<Flow<Intent>> = emptyList(),
-    val coroutineContext: CoroutineContext = Dispatchers.Default
+    coroutineContext: CoroutineContext = Dispatchers.Default
 ): KoinComponent {
     protected data class StateAction<State>(
         val state: State,
         val syncJob: CompletableJob? = null
     ) : FlowAction
     interface EventAction: FlowAction {
-        val function: suspend () -> Unit
+        companion object {
+            fun execute(execution: suspend () -> Unit) = object : EventAction {
+                override suspend fun execute() = execution()
+            }
+        }
+        suspend fun execute()
     }
 
     private val intentFlow by lazy(LazyThreadSafetyMode.NONE) {
@@ -77,8 +82,12 @@ abstract class FlowViewModel<Intent, State>(
             .flowOn(coroutineContext)
             .stateIn(coroutineScope, SharingStarted.Eagerly, initializeState)
     }
-    val extras: Flow<FlowAction> by lazy(LazyThreadSafetyMode.NONE) {
+    protected val events by lazy(LazyThreadSafetyMode.NONE) {
         actionFlow
+            .filterIsInstance<EventAction>()
+            .onEach { it.execute() }
+            .flowOn(coroutineContext)
+            .launchIn(coroutineScope)
     }
 
     fun send(intent: Intent) {
@@ -99,11 +108,4 @@ abstract class FlowViewModel<Intent, State>(
         concurrency: Int = DEFAULT_CONCURRENCY,
         noinline block: suspend FlowCollector<FlowAction>.(T) -> Unit
     ) = filterIsInstance<T>().flatMapMerge(concurrency) { flow { block(it) } }
-
-    inline fun <reified T : EventAction> reduceEvent() =
-        extras
-            .filterIsInstance<T>()
-            .onEach { it.function() }
-            .flowOn(coroutineContext)
-            .launchIn(coroutineScope)
 }

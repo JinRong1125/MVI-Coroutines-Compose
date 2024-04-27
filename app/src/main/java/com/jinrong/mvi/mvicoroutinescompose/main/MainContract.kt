@@ -2,7 +2,6 @@ package com.jinrong.mvi.mvicoroutinescompose.main
 
 import com.jinrong.mvi.mvicoroutinescompose.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
-import com.jinrong.mvi.mvicoroutinescompose.mvi.FlowViewModel
 
 class MainContract {
     sealed class Intent {
@@ -34,9 +33,6 @@ class MainContract {
             }
         }
     }
-
-    data class NavigationAction(override val function: suspend () -> Unit) : FlowViewModel.EventAction
-    data class ViewAction(override val function: suspend () -> Unit) : FlowViewModel.EventAction
 
     interface View {
         fun showToast(message: String)
