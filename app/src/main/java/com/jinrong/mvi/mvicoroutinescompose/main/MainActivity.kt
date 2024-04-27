@@ -24,7 +24,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -39,10 +38,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -54,8 +51,6 @@ import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Intent
 import com.jinrong.mvi.mvicoroutinescompose.main.MainContract.Screen
 import com.jinrong.mvi.mvicoroutinescompose.entity.Album
 import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.FlowCollector
 import org.koin.core.context.loadKoinModules
 import org.koin.dsl.module
 
@@ -64,15 +59,15 @@ class MainActivity : ComponentActivity() {
     private val searchText by lazy(LazyThreadSafetyMode.NONE) {
         mutableStateOf(TextFieldValue("kuuki"))
     }
-    private val mainViewModel by lazy(LazyThreadSafetyMode.NONE) {
-        MainViewModel(lifecycleScope, searchText, view)
-    }
     private val view by lazy(LazyThreadSafetyMode.NONE) {
         object : MainContract.View {
             override fun showToast(message: String) {
                 Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
             }
         }
+    }
+    private val mainViewModel by lazy(LazyThreadSafetyMode.NONE) {
+        MainViewModel(lifecycleScope, searchText, view)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -226,12 +221,6 @@ class MainActivity : ComponentActivity() {
                         .weight(2F)
                 )
             }
-        }
-    }
-
-    private suspend inline fun <T> LifecycleOwner.repeatOnCreated(flow: Flow<T>, flowCollector: FlowCollector<T>) {
-        repeatOnLifecycle(Lifecycle.State.CREATED) {
-            flow.collect(flowCollector)
         }
     }
 }
