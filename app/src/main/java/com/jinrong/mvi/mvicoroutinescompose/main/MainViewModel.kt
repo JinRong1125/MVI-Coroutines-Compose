@@ -69,33 +69,33 @@ class MainViewModel(
             }.onFailure { throwable ->
                 emit(StateAction(state().copy(searching = false)))
                 if (throwable !is CancellationException) {
-                    emit(EventAction.execute { withContext(Dispatchers.Main) {
+                    emit(EventAction.execute {
                         view.showToast("get searchAlbums failed by q: $query")
-                    }})
+                    })
                 }
                 return@mapLatestFlow
             }.getOrThrow()
             if (searchAlbums.results.albums.isEmpty()) {
-                emit(EventAction.execute { withContext(Dispatchers.Main) {
+                emit(EventAction.execute {
                     view.showToast("no albums found by q: $query")
-                }})
+                })
             }
             emit(StateAction(state().copy(searchAlbums = searchAlbums, searching = false)))
         },
         mapConcatFlow<Intent.ClickAlbum> {
             val albumScreen = MainContract.Screen.Album(it.album.link)
-            emit(EventAction.execute { withContext(Dispatchers.Main) {
+            emit(EventAction.execute {
                 navHostController.navigate(albumScreen.route)
-            }})
+            })
         },
         mapConcatFlow<Intent.ShowAlbum> {
             val link = it.link
             val album = runCatching {
                 vgmdbService.album(link)
             }.onFailure {
-                emit(EventAction.execute { withContext(Dispatchers.Main) {
+                emit(EventAction.execute {
                     view.showToast("get album failed by link: $link")
-                }})
+                })
                 return@mapConcatFlow
             }.getOrThrow()
             emit(StateAction(state().copy(album = album)))

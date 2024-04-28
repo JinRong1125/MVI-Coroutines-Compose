@@ -39,11 +39,16 @@ abstract class FlowViewModel<Intent, State>(
     ) : FlowAction
     interface EventAction: FlowAction {
         companion object {
-            fun execute(execution: suspend () -> Unit) = object : EventAction {
-                override suspend fun execute() = execution()
+            fun execute(
+                coroutineContext: CoroutineContext = Dispatchers.Main,
+                execution: () -> Unit
+            ) = object : EventAction {
+                override val coroutineContext = coroutineContext
+                override fun execute() = execution()
             }
         }
-        suspend fun execute()
+        val coroutineContext: CoroutineContext
+        fun execute()
     }
 
     private val intentFlow by lazy(LazyThreadSafetyMode.NONE) {
@@ -85,7 +90,11 @@ abstract class FlowViewModel<Intent, State>(
     protected val events by lazy(LazyThreadSafetyMode.NONE) {
         actionFlow
             .filterIsInstance<EventAction>()
-            .onEach { it.execute() }
+            .onEach {
+                coroutineScope.launch(it.coroutineContext) {
+                    it.execute()
+                }
+            }
             .flowOn(coroutineContext)
             .launchIn(coroutineScope)
     }
