@@ -37,7 +37,7 @@ abstract class FlowViewModel<Intent, State>(
         val state: State,
         val syncJob: CompletableJob? = null
     ) : FlowAction
-    interface EventAction: FlowAction {
+    protected interface EventAction: FlowAction {
         companion object {
             fun execute(
                 coroutineContext: CoroutineContext = Dispatchers.Main,

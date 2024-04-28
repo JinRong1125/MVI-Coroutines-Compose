@@ -16,13 +16,11 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.withContext
 import org.koin.core.component.inject
 
 class MainViewModel(
     coroutineScope: CoroutineScope,
-    searchTextState: androidx.compose.runtime.State<TextFieldValue>,
-    private val view: MainContract.View
+    searchTextState: androidx.compose.runtime.State<TextFieldValue>
 ) : FlowViewModel<Intent, State>(
     coroutineScope = coroutineScope,
     initializeState = State.initialize(),
@@ -35,6 +33,7 @@ class MainViewModel(
     )
 ) {
     private val vgmdbService by inject<VGMdbService>()
+    private val view by inject<MainContract.View>()
     private val navHostController by inject<NavHostController>()
 
     val searchAlbums by lazy(LazyThreadSafetyMode.NONE) {

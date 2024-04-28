@@ -54,28 +54,28 @@ import com.jinrong.mvi.mvicoroutinescompose.entity.SearchAlbums
 import org.koin.core.context.loadKoinModules
 import org.koin.dsl.module
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), MainContract.View {
 
     private val searchText by lazy(LazyThreadSafetyMode.NONE) {
         mutableStateOf(TextFieldValue("kuuki"))
     }
-    private val view by lazy(LazyThreadSafetyMode.NONE) {
-        object : MainContract.View {
-            override fun showToast(message: String) {
-                Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
     private val mainViewModel by lazy(LazyThreadSafetyMode.NONE) {
-        MainViewModel(lifecycleScope, searchText, view)
+        MainViewModel(lifecycleScope, searchText)
+    }
+
+    override fun showToast(message: String) {
+        Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val navController = rememberNavController()
-            val navModule = module { single<NavHostController> { navController } }
-            loadKoinModules(navModule)
+            val mainModule = module {
+                single<MainContract.View> { this@MainActivity }
+                single<NavHostController> { navController }
+            }
+            loadKoinModules(mainModule)
             NavHost(
                 navController = navController,
                 startDestination = Screen.Search.route,
