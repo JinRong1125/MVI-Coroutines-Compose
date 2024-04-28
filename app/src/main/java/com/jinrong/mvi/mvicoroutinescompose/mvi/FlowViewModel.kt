@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
@@ -76,13 +76,8 @@ abstract class FlowViewModel<Intent, State>(
     protected val states by lazy(LazyThreadSafetyMode.NONE) {
         actionFlow
             .filterIsInstance<StateAction<State>>()
-            .flatMapConcat {
-                val syncJob = it.syncJob
-                flow {
-                    emit(it.state)
-                }.onCompletion {
-                    syncJob?.complete()
-                }
+            .map {
+                it.state
             }
             .flowOn(coroutineContext)
             .stateIn(coroutineScope, SharingStarted.Eagerly, initializeState)
