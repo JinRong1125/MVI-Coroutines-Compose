@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transform
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -71,13 +72,14 @@ abstract class FlowViewModel<Intent, State>(
         }
             .increaseAction()
             .flowOn(coroutineContext)
-            .shareIn(coroutineScope, SharingStarted.WhileSubscribed())
     }
     protected val states by lazy(LazyThreadSafetyMode.NONE) {
         actionFlow
             .filterIsInstance<StateAction<State>>()
-            .map {
-                it.state
+            .transform {
+                emit(it.state).apply {
+                    it.syncJob?.complete()
+                }
             }
             .flowOn(coroutineContext)
             .stateIn(coroutineScope, SharingStarted.Eagerly, initializeState)
