@@ -127,14 +127,14 @@ class MainActivity : ComponentActivity(), MainContract.View {
         searching: State<Boolean>,
         onClickAlbum: (SearchAlbums.Results.Album) -> Unit
     ) {
-        remember { searchText }
+        val rememberSearchText = remember { searchText }
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             OutlinedTextField(
-                value = searchText.value,
-                onValueChange = { searchText.value = it },
+                value = rememberSearchText.value,
+                onValueChange = { rememberSearchText.value = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(10.dp)
