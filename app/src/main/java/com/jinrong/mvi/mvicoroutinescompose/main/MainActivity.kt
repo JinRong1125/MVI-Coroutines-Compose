@@ -56,9 +56,7 @@ import org.koin.dsl.module
 
 class MainActivity : ComponentActivity(), MainContract.View {
 
-    private val searchText by lazy(LazyThreadSafetyMode.NONE) {
-        mutableStateOf(TextFieldValue("kuuki"))
-    }
+    private val searchText = mutableStateOf(TextFieldValue("kuuki"))
     private val mainViewModel by lazy(LazyThreadSafetyMode.NONE) {
         MainViewModel(lifecycleScope, searchText)
     }
