@@ -35,6 +35,6 @@ class MainContract {
     }
 
     interface View {
-        fun showToast(message: String)
+        suspend fun showToast(message: String)
     }
 }

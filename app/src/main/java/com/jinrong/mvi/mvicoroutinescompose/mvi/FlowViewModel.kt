@@ -41,14 +41,14 @@ abstract class FlowViewModel<Intent, State>(
         companion object {
             fun execute(
                 coroutineContext: CoroutineContext = Dispatchers.Main,
-                execution: () -> Unit
+                execution: suspend () -> Unit
             ) = object : EventAction {
                 override val coroutineContext = coroutineContext
-                override fun execute() = execution()
+                override suspend fun execute() = execution()
             }
         }
         val coroutineContext: CoroutineContext
-        fun execute()
+        suspend fun execute()
     }
 
     private val intentFlow by lazy(LazyThreadSafetyMode.NONE) {
