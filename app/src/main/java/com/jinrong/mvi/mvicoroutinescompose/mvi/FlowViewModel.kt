@@ -38,7 +38,6 @@ abstract class FlowViewModel<Intent: Any, State>(
         mapOf(*intentClass.nestedClasses.map {
             it to MutableSharedFlow<Intent>(extraBufferCapacity = Int.MAX_VALUE)
         }.toTypedArray())
-    private val intentFlows = intentMap.values
 
     private val actions by lazy(LazyThreadSafetyMode.NONE) {
         intentMap.keys.map {
