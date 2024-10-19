@@ -25,6 +25,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -57,9 +58,8 @@ import org.koin.dsl.module
 
 class MainActivity : ComponentActivity(), MainContract.View {
 
-    private val searchText = mutableStateOf(TextFieldValue("kuuki"))
     private val mainViewModel by lazy(LazyThreadSafetyMode.NONE) {
-        MainViewModel(lifecycleScope, searchText)
+        MainViewModel(lifecycleScope)
     }
 
     override suspend fun showToast(message: String) {
@@ -84,6 +84,10 @@ class MainActivity : ComponentActivity(), MainContract.View {
                 composable(
                     route = Screen.Search.route
                 ) {
+                    val searchText = remember { mutableStateOf(TextFieldValue("kuuki")) }
+                    LaunchedEffect(searchText.value.text) {
+                        mainViewModel.intent(Intent.SearchAlbum(searchText.value.text))
+                    }
                     val searchAlbums = mainViewModel.searchAlbums
                         .collectAsStateWithLifecycle(
                             initialValue = emptyList(),
@@ -95,7 +99,7 @@ class MainActivity : ComponentActivity(), MainContract.View {
                             minActiveState = Lifecycle.State.CREATED
                         )
                     val clickAlbum: (SearchAlbums.Results.Album) -> Unit = {
-                        mainViewModel.send(Intent.ClickAlbum(it))
+                        mainViewModel.intent(Intent.ClickAlbum(it))
                     }
                     SearchScreen(searchText, searchAlbums, searching, clickAlbum)
                 }
@@ -114,7 +118,7 @@ class MainActivity : ComponentActivity(), MainContract.View {
                         )
                     val showAlbum: () -> Unit = {
                         val link = it.arguments?.getString(Screen.Album.LINK) ?: ""
-                        mainViewModel.send(Intent.ShowAlbum(link))
+                        mainViewModel.intent(Intent.ShowAlbum(link))
                     }
                     AlbumScreen(album, showAlbum)
                 }
@@ -130,14 +134,13 @@ class MainActivity : ComponentActivity(), MainContract.View {
         searching: State<Boolean>,
         onClickAlbum: (SearchAlbums.Results.Album) -> Unit
     ) {
-        val rememberSearchText = remember { searchText }
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             OutlinedTextField(
-                value = rememberSearchText.value,
-                onValueChange = { rememberSearchText.value = it },
+                value = searchText.value,
+                onValueChange = { searchText.value = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(10.dp)
