@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.launch
 import org.koin.core.component.inject
 import kotlin.reflect.KClass
 
@@ -41,7 +42,7 @@ class MainViewModel(
         .map { it.searching }
         .flowOn(Dispatchers.IO)
 
-    override fun MutableSharedFlow<Intent>.mapAction(
+    override fun MutableSharedFlow<Intent>.mapState(
         intentClass: KClass<*>,
         state: () -> State
     ) = when (intentClass) {
@@ -50,43 +51,44 @@ class MainViewModel(
             if (query.isEmpty()) {
                 return@mapLatest
             }
-            emit(StateAction(state().copy(searchAlbums = null, searching = true)))
+            set(state().copy(searchAlbums = null, searching = true))
             val searchAlbums = runCatching {
                 vgmdbService.searchAlbums(query)
             }.onFailure { throwable ->
-                emit(StateAction(state().copy(searching = false)))
+                set(state().copy(searching = false))
+
                 if (throwable !is CancellationException) {
-                    emit(EventAction.execute {
+                    coroutineScope.launch {
                         view.showToast("get searchAlbums failed by q: $query")
-                    })
+                    }
                     return@mapLatest
                 }
             }.getOrThrow()
             if (searchAlbums.results.albums.isEmpty()) {
-                emit(EventAction.execute {
+                coroutineScope.launch {
                     view.showToast("no albums found by q: $query")
-                })
+                }
             }
-            emit(StateAction(state().copy(searchAlbums = searchAlbums, searching = false)))
+            set(state().copy(searchAlbums = searchAlbums, searching = false))
         }
         Intent.ClickAlbum::class -> mapConcat<Intent.ClickAlbum> {
             val albumScreen = MainContract.Screen.Album(it.album.link)
-            emit(EventAction.execute {
+            coroutineScope.launch {
                 navHostController.navigate(albumScreen.route)
-            })
+            }
         }
         Intent.ShowAlbum::class -> mapConcat<Intent.ShowAlbum> {
             val link = it.link
             val album = runCatching {
                 vgmdbService.album(link)
             }.onFailure {
-                emit(EventAction.execute {
+                coroutineScope.launch {
                     view.showToast("get album failed by link: $link")
-                })
+                }
                 return@mapConcat
             }.getOrThrow()
-            emit(StateAction(state().copy(album = album)))
+            set((state().copy(album = album)))
         }
-        else -> flow {  }
+        else -> flow {}
     }
 }
